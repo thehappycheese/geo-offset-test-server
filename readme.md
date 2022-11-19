@@ -9,4 +9,4 @@ it is a `warp` based server written in Rust which is directly calling my fork of
 
 Hopefully it will help me to fix problems like this:
 
-![Problematic Case](../../../E:/GitProjects/geo-tester/readme_extras/problem_1.png)
+![Problematic Case](readme_extras/problem_1.png)
