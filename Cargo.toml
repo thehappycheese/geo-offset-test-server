@@ -1,0 +1,20 @@
+[package]
+name = "geo-tester"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[profile.dev]
+op-level = 1
+
+[profile.dev.package."*"]
+opt-level = 3
+
+[dependencies]
+tokio = { version = "1", features = ["full"] }
+warp = "0.3.3"
+geo = {path="../geo/geo"}
+wkt = {version="0.10.3", features=["serde"]}
+geo-types = "0.7.8"
+serde = {version="1.0", features = ["derive"]}

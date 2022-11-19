@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <script src="Vector2.js" defer></script>
+        <script src="transform.js" defer></script>
+        <script src="hit_test.js" defer></script>
+        <script src="wkt_tools.js" defer></script>
+        <script src="examples.js" defer></script>
+        <script src="main.js" defer></script>
+        <style>
+            body{
+                margin: 30px;
+                display:grid;
+                grid-template-rows: auto auto 1fr;
+                font-family: sans-serif;
+            }
+            canvas {
+                border:1px solid grey;
+            }
+            #instructions{
+                font-size: 80%;
+            }
+        </style>
+    </head>
+    <body>
+        <div id="controls">
+            <label for="offset_input">Offset:</label>
+            <input type="range" value = "5" min="0" max="50" id="offset_input" onchange="debounce_offset();update_status();"/>
+            <div id="status">&nbsp;</div>
+            <button onclick="clear_points()">clear</button>
+            <button onclick="reset_view()">reset view</button>
+            <button onclick="restore_example(example_1)">Example 1</button>
+            <button onclick="restore_example(example_2)">Example 2</button>
+            <button onclick="restore_example(example_3)">Example 3</button>
+            <button onclick="restore_example(example_4)">Example 4</button>
+            <button onclick="restore_example(example_5)">Example 5</button>
+            <button onclick="restore_example(example_6)">Example 6</button>
+        </div>
+        <div id="instructions">Left-Click to add and move points, Right-Click to remove points, Middle-Click to pan, Scroll to zoom.</div>
+        <canvas width="400" height="400"></canvas>
+
+    </body>
+</html>
