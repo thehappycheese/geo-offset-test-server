@@ -1,3 +1,4 @@
+"use strict";
 
 const POINT_RADIUS = 6;
 
@@ -9,11 +10,13 @@ let canvas = document.querySelector("canvas");
 let ctx = canvas.getContext("2d");
 
 let status_div = document.querySelector("#status");
-let update_status = () => status_div.innerHTML = `offset:${get_offset()} x: ${mouse_screen.x.toFixed(3)} y:${mouse_screen.y.toFixed(3)}`;
+let update_status = () => {
+    let world_mouse = transform_screen_to_world(mouse_screen);
+    status_div.innerHTML = `offset:${get_offset()} x: ${world_mouse.x.toFixed(3).padStart(10, " ")} y:${world_mouse.y.toFixed(3).padStart(10, " ")}`;
+}
 
 let get_offset = () => parseFloat(document.querySelector("#offset_input").value);
 let set_offset = new_offset => document.querySelector("#offset_input").value = new_offset;
-
 
 
 canvas.addEventListener("pointerdown", pointer_down);
@@ -67,7 +70,6 @@ function pointer_move(e) {
 }
 
 
-
 function pointer_scroll(e) {
     e.preventDefault();
     update_mouse_position(e);
@@ -87,6 +89,7 @@ function pointer_scroll(e) {
     update_status()
     render()
 }
+
 
 function pointer_down(e) {
     e.preventDefault();
@@ -135,6 +138,7 @@ function pointer_down(e) {
     render()
 }
 
+
 function pointer_up(e) {
     drag.active = false;
     pan.active = false;
@@ -143,7 +147,6 @@ function pointer_up(e) {
         debounce_offset();
     }
 }
-
 
 
 function draw_points(points) {
@@ -175,6 +178,7 @@ function draw_points(points) {
     )
 }
 
+
 function clear_points() {
     points = []
     points_offset_l = []
@@ -182,35 +186,143 @@ function clear_points() {
     render()
 }
 
+
 function render() {
+
     ctx.globalAlpha = 1
     ctx.fillStyle = "white";
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    draw_grid()
+    draw_origin()
+    ctx.setLineDash([])
     ctx.lineWidth = 2
+    ctx.font = "bold 20px sans-serif"
+    ctx.textBaseline = "top";
     ctx.strokeStyle = "black"
     ctx.fillStyle = "black"
+    ctx.fillText("input", 5, 5 + 20 + 2)
     draw_points(points);
+
     ctx.globalAlpha = 0.5
+
     ctx.strokeStyle = "rebeccapurple"
     ctx.fillStyle = "rebeccapurple"
+    ctx.fillText("input.offset(-distance)", 5, 5)
     draw_points(points_offset_l);
+
     ctx.strokeStyle = "orangered"
     ctx.fillStyle = "orangered"
+    ctx.fillText("input.offset(+distance)", 5, 5 + 20 * 2 + 2 * 2)
     draw_points(points_offset_r);
+
 }
+
+function draw_origin() {
+    let origin_world = new Vector2(0, 0);
+    let unit_x = new Vector2(1, 0);
+    let unit_y = new Vector2(0, 1);
+
+    let origin_screen = transform_world_to_screen(origin_world);
+    if (!(origin_screen.x > 10
+        && origin_screen.x < canvas.width - 10
+        && origin_screen.y > 10
+        && origin_screen.y < canvas.height - 10)) {
+
+        origin_screen = new Vector2(10, canvas.height - 50)
+    }
+
+    let size = 40;
+    let arrow_length = 6;
+    let arrow_width = 5;
+
+    function draw_chunk(origin, direction, normal, text, color) {
+        ctx.strokeStyle = color;
+        ctx.beginPath();
+        [
+            origin,
+            origin.add(direction.mul(size)),
+            origin.add(direction.mul(size)),
+            origin.add(direction.mul(size - arrow_length).add(normal.mul(arrow_width)))
+        ]
+            //.map(item=>transform_world_to_screen(item))
+            .map(item => ctx.lineTo(item.x, item.y));
+        ctx.stroke();
+
+        let label_position = origin.add(direction.mul(size-arrow_length/2).add(normal.mul(arrow_width*2.5)))
+        ctx.fillStyle = color
+        ctx.textBaseline = "middle";
+        ctx.textAlign = "center";
+        ctx.fillText(text, label_position.x, label_position.y)
+    }
+    ctx.save()
+        ctx.lineWidth = 3;
+        draw_chunk(origin_screen,unit_x,unit_y,"x","red");
+        draw_chunk(origin_screen,unit_y,unit_x,"y","green");
+    ctx.restore();
+}
+
+
+let possible_spacings = [0.001, 0.01, 0.05, 0.1, 0.5, 1, 5, 10, 25, 50, 100, 200, 500, 1000].reverse();
+function draw_grid() {
+    let top_left = transform_screen_to_world(new Vector2(0, 0))
+    let bottom_right = transform_screen_to_world(new Vector2(canvas.width, canvas.height))
+    let world_size = bottom_right.sub(top_left);
+    let spacing;
+    for (spacing of possible_spacings) {
+        let count = world_size.x / spacing
+        if (count >= 10) {
+            break
+        }
+    }
+
+    ctx.save()
+    ctx.lineWidth = 1
+    ctx.strokeStyle = "grey"
+    ctx.setLineDash([3, 3])
+
+    let start_x = (top_left.x - top_left.x % spacing)
+    let count_x = world_size.x / spacing
+    for (let i = 0; i < count_x + 1; i++) {
+
+        ctx.beginPath();
+        [
+            new Vector2(start_x + i * spacing, top_left.y),
+            new Vector2(start_x + i * spacing, bottom_right.y)
+        ]
+            .map(item => transform_world_to_screen(item))
+            .map(item => ctx.lineTo(item.x, item.y));
+        ctx.stroke()
+    }
+    let start_y = (top_left.y - top_left.y % spacing)
+    let count_y = world_size.y / spacing
+    for (let i = 0; i < count_y + 1; i++) {
+        ctx.beginPath();
+        [
+            new Vector2(top_left.x, start_y + i * spacing),
+            new Vector2(bottom_right.x, start_y + i * spacing)
+        ]
+            .map(item => transform_world_to_screen(item))
+            .map(item => ctx.lineTo(item.x, item.y));
+        ctx.stroke();
+    }
+    ctx.restore()
+}
+
 
 let last_offset_call = performance.now();
 let timer_handel = undefined;
 function debounce_offset() {
     clearTimeout(timer_handel);
     let now = performance.now()
-    let time_since_offset = now-last_offset_call;
-    if (time_since_offset>300) {
+    let time_since_offset = now - last_offset_call;
+    if (time_since_offset > 300) {
         offset()
-    }else{
+    } else {
         timer_handel = setTimeout(offset, 100)
     }
 }
+
 
 async function rpc_offset(points, offset) {
     if (points.length < 2) {
@@ -225,11 +337,13 @@ async function rpc_offset(points, offset) {
     return parse_wkt(offset_ls_wkt)
 }
 
+
 async function offset() {
     last_offset_call = performance.now();
     let offset = get_offset()
     points_offset_l = await rpc_offset(points, -offset);
-    points_offset_r = await rpc_offset(points,  offset);
+    points_offset_r = await rpc_offset(points, offset);
     render()
 }
 
+restore_example(examples[0])

@@ -11,33 +11,73 @@
             body{
                 margin: 30px;
                 display:grid;
-                grid-template-rows: auto auto 1fr;
+                grid-template-columns: 1fr 900px 1fr;
                 font-family: sans-serif;
+            }
+            #main{
+                grid-column: 2/3;
             }
             canvas {
                 border:1px solid grey;
+                cursor:pointer;
+                grid-column: 2/3;
             }
             #instructions{
                 font-size: 80%;
             }
+            #status{
+                font-family: monospace;
+            }
+            #canvas-container{
+                display:grid;
+                grid-template-columns: 1fr auto 1fr;
+            }
+            h1{
+                font-size: 2em;
+                margin:0.1em 0;
+            }
+            #header{
+                margin-bottom: 1em;
+            }
         </style>
     </head>
     <body>
-        <div id="controls">
-            <label for="offset_input">Offset:</label>
-            <input type="range" value = "5" min="0" max="50" id="offset_input" onchange="debounce_offset();update_status();"/>
+        <div id="main">
+            <div id="header">
+                <h1>geo::algorithm::offset() tester</h1>
+                <div id="instructions">
+                    <ul>
+                        <li>Left-Click to add and move points,</li>
+                        <li>Right-Click to remove points,</li>
+                        <li>Middle-Click to pan,</li>
+                        <li>Scroll to zoom.</li>
+                    </ul>
+                </div>
+            </div>
+            <div id="controls">
+                <div>
+                    <label for="offset_input">distance:</label>
+                    <input type="range" value = "5" min="0" max="50" id="offset_input" onchange="debounce_offset();update_status();"/>
+                </div>
+                <div>
+                    <button onclick="clear_points()">clear</button>
+                    <button onclick="reset_view()">reset view</button>
+                </div>
+                <div id="examples">
+                    Show example
+                    <button onclick="restore_example(examples[0])">0</button>
+                    <button onclick="restore_example(examples[1])">1</button>
+                    <button onclick="restore_example(examples[2])">2</button>
+                    <button onclick="restore_example(examples[3])">3</button>
+                    <button onclick="restore_example(examples[4])">4</button>
+                    <button onclick="restore_example(examples[5])">5</button>
+                    <button onclick="restore_example(examples[6])">6</button>
+                </div>
+            </div>
+            <div id="canvas-container">
+                <canvas width="800" height="400"></canvas>
+            </div>
             <div id="status">&nbsp;</div>
-            <button onclick="clear_points()">clear</button>
-            <button onclick="reset_view()">reset view</button>
-            <button onclick="restore_example(example_1)">Example 1</button>
-            <button onclick="restore_example(example_2)">Example 2</button>
-            <button onclick="restore_example(example_3)">Example 3</button>
-            <button onclick="restore_example(example_4)">Example 4</button>
-            <button onclick="restore_example(example_5)">Example 5</button>
-            <button onclick="restore_example(example_6)">Example 6</button>
         </div>
-        <div id="instructions">Left-Click to add and move points, Right-Click to remove points, Middle-Click to pan, Scroll to zoom.</div>
-        <canvas width="400" height="400"></canvas>
-
     </body>
 </html>

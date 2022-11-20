@@ -24,7 +24,10 @@ async fn main() {
 
     let hello = warp::get().and(warp::query()).and(warp::path::end()).map(
             move |query: QueryParameters| match LineString::try_from_wkt_str(query.wkt.as_str()) {
-                Ok(ls) => ls.offset(query.offset).to_wkt().to_string(),
+                Ok(ls) => match ls.offset(query.offset){
+                    Some(ols)=>ols.to_wkt().to_string(),
+                    None=>"ERROR".into()
+                },
                 Err(_) => "ERROR".into(),
             },
         ).or(warp::fs::dir("./static/"));
