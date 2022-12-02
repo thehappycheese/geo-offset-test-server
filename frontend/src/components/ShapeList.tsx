@@ -4,11 +4,6 @@ import { FC } from "react";
 
 
 
-
-
-
-
-
 export const ShapeList:FC<{
     items:string[]
 }> = (props) => {

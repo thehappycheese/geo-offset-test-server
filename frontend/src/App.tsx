@@ -77,6 +77,7 @@ function App() {
       <div id="canvas-container">
         <NodeCanvas
         points={points}
+        set_points={set_points}
         />
       </div>
     </>

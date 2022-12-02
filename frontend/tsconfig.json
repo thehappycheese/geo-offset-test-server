@@ -4,6 +4,5 @@
         "esModuleInterop": true,
         "target": "ESNext",
         "moduleResolution": "node"
-
     }
 }

@@ -48,7 +48,7 @@ function update_mouse_position(e) {
     mouse_screen = new Vector2(
         e.clientX - rec.left,
         e.clientY - rec.top
-    )
+    );
 }
 
 

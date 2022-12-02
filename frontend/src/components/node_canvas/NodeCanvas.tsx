@@ -1,40 +1,55 @@
+// eslint-disable no-unused-vars
+
 import React, { useCallback, useEffect, useRef, useState } from "react";
 import Vector2 from "../../util/Vector2";
+import { Transform } from "./Transform";
+import {hit_test, hit_test_lines} from './hit_test';
 
 
-class Transform{
-    // consider to be immutable
-    #translate:Vector2
-    #scale:number
-    constructor(translation?:Vector2, scale?:number){
-        this.#translate = translation ?? new Vector2();
-        this.#scale = scale ?? 1;
-    }
-    clone(){
-        return new Transform(this.#translate.clone(), this.#scale);
-    }
-    clone_with_translate(new_translation:Vector2){
-        return new Transform(new_translation, this.#scale);
-    }
-    clone_with_scale(new_scale:number){
-        return new Transform(this.#translate.clone(), new_scale);
-    }
-    world_to_screen(point:Vector2) {
-        return point.add(this.#translate).mul(this.#scale);
-    }
-    screen_to_world(point) {
-        return point.div(this.#scale).sub(this.#translate);
-    }
-    toString(){
-        return `(p+${this.#translate.toString()})*${this.#scale}`
-    }
+
+type HoverState = {
+    type:"point"|"line",
+    index:number
+}|{
+    type:"none"
+};
+
+type DragState = {
+    type:"point"|"line"|"world"
+    start_mouse_screen:Vector2
+    start_position:Vector2
+    index:number
+}|{
+    type:"none"
+};
+
+const mouse_position_from_event = (e:React.PointerEvent<Element>, canvas:HTMLCanvasElement) =>{
+    let rec = canvas.getBoundingClientRect();
+    return new Vector2(
+        e.clientX - rec.left,
+        e.clientY - rec.top
+    );
 }
 
-export const NodeCanvas = React.memo((props:{points:Vector2[]})=>{
-    console.log("NodeCanvas - Processing");
+interface NodeCanvasProps {
+    points:Vector2[]
+    set_points:React.Dispatch<React.SetStateAction<Vector2[]>>
+    point_render_diameter?:number
+    line_thickness?:number
+}
+export const NodeCanvas = React.memo(({
+    points,
+    set_points,
+    point_render_diameter=8,
+    line_thickness=2.5
+}:NodeCanvasProps)=>{
+    //console.log("NodeCanvas - Processing");
     const ref_canvas = useRef<HTMLCanvasElement | null>(null);
-    const [transform, set_transform] = useState(new Transform())
-    const [canvas_size, set_canvas_size] = useState(new Vector2())
+    const [transform, set_transform] = useState(new Transform());
+    const [canvas_size, set_canvas_size] = useState(new Vector2());
+    const [hover_state, set_hover_state] = useState({type:"none"} as HoverState);
+    const [drag_state, set_drag_state] = useState({type:"none"} as DragState)
+    //const [mouse_screen, set_mouse_screen] = useState(new Vector2());
 
     /**
      * This is a special callback to update the canvas size.
@@ -68,31 +83,100 @@ export const NodeCanvas = React.memo((props:{points:Vector2[]})=>{
 
     // render
     useEffect(()=>{
+        console.log("Node-Canvas - Rendered")
         if(!ref_canvas.current) return;
         const ctx = ref_canvas.current.getContext('2d');
         if(!ctx) return;
-
+        ctx.clearRect(0,0,ref_canvas.current.width, ref_canvas.current.height);
+        // TODO: add transform
+        ctx.strokeStyle = "black";
+        ctx.lineWidth = line_thickness;
         ctx.beginPath()
-        ctx.lineTo(10,10)
-        ctx.lineTo(20,20)
+        points.forEach(point=>ctx.lineTo(point.x, point.y));
         ctx.stroke()
-        console.log("Node-Canvas - Rendered")
-    },[canvas_size, transform])
+        for(let point of points){
+            ctx.beginPath()
+            ctx.arc(point.x,point.y,5,0,Math.PI*2);
+            ctx.fill()
+        }
+        if(hover_state.type==="point"){
+            ctx.strokeStyle = "red";
+            ctx.beginPath()
+            ctx.arc(points[hover_state.index].x,points[hover_state.index].y,5,0,Math.PI*2);
+            ctx.fill()
+            ctx.stroke();
+        }
+        if(hover_state.type==="line"){
+            ctx.strokeStyle = "red";
+            ctx.beginPath()
+            ctx.lineTo(points[hover_state.index].x, points[hover_state.index].y);
+            ctx.lineTo(points[hover_state.index+1].x, points[hover_state.index+1].y);
+            ctx.stroke()
+        }
+    },[
+        points,
+        canvas_size,
+        transform,
+        hover_state,
+        point_render_diameter,
+        line_thickness
+    ])
 
     const pointer_down = useCallback((e:React.PointerEvent<HTMLCanvasElement>)=>{
+        e.preventDefault();
+        // ref_canvas.current && set_mouse_screen(
+        //     mouse_position_from_event(e, ref_canvas.current)
+        // );
+        let mouse_screen = mouse_position_from_event(e, ref_canvas.current);
+        let mouse_world = transform.screen_to_world(mouse_screen);
+        if(hover_state.type==="point"){
+            set_drag_state({
+                type:"point",
+                start_mouse_screen:mouse_screen,
+                start_position:points[hover_state.index],
+                index:hover_state.index
+            })
+        }
         console.log("Pointer Down")
-    },[]);
+    },[set_drag_state, hover_state, points, transform]);
 
     const pointer_up = useCallback((e:React.PointerEvent<any>)=>{
         console.log("Pointer Up")
-    },[]);
+        set_drag_state({type:"none"})
+    },[set_drag_state]);
 
     const pointer_move = useCallback((e:React.PointerEvent<any>)=>{
         console.log("Pointer Move")
-    },[]);
+        // ref_canvas.current && set_mouse_screen(
+        //     mouse_position_from_event(e, ref_canvas.current)
+        // );
+        let mouse_screen = mouse_position_from_event(e, ref_canvas.current);
+        let mouse_world = transform.screen_to_world(mouse_screen);
+        if(drag_state.type==="none"){
+            let hover_point;
+            let hover_line;
+            if((hover_point = hit_test(points, mouse_world, point_render_diameter / transform.scale))>-1){
+                set_hover_state({type:"point", index:hover_point})
+            }else if((hover_line = hit_test_lines(points, mouse_world, point_render_diameter / transform.scale))>-1){
+                set_hover_state({type:"line", index:hover_line});
+            }else if(hover_state.type!=="none"){
+                set_hover_state({type:"none"});
+            }
+        }else if (drag_state.type==="point") {
+            let drag_distance = mouse_screen.sub(drag_state.start_mouse_screen);
+            points[drag_state.index] = drag_state.start_position.add(drag_distance);
+            set_points([...points])
+        }
+    },[hover_state, drag_state, set_hover_state, transform, set_points, points, point_render_diameter]);
 
-    
-    
+    const pointer_leave = useCallback((e:React.PointerEvent<any>)=>{
+        set_drag_state({type:"none"});
+    },[set_drag_state]);
+
+    const wheel = useCallback((e:React.WheelEvent<any>)=>{
+        e.preventDefault();
+        console.log("Wheel")
+    },[]);
 
     return <canvas
         className="node_canvas"
@@ -100,6 +184,9 @@ export const NodeCanvas = React.memo((props:{points:Vector2[]})=>{
         onPointerDown={pointer_down}
         onPointerUp={pointer_up}
         onPointerMove={pointer_move}
+        onPointerLeave={pointer_leave}
+        onWheel={wheel}
+        onContextMenu={e => e.preventDefault()}
     ></canvas>;
 });
 
